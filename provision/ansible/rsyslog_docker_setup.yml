@@ -7,6 +7,7 @@
     container_user: container_user
     rsyslog_dir: /home/container_user/services/rsyslog
     docker_compose_file: "{{ rsyslog_dir }}/docker-compose.yml"
+    rsyslog_conf_file: "{{ rsyslog_dir }}/rsyslog.conf"
 
   tasks:
     - name: Install required APT packages
@@ -50,7 +51,7 @@
         groups: docker
         append: yes
 
-    - name: Create rsyslog directory
+    - name: Create rsyslog service directory
       file:
         path: "{{ rsyslog_dir }}"
         state: directory
@@ -67,13 +68,10 @@
         group: "{{ container_user }}"
         mode: '0644'
 
-    - name: Ensure rsyslog.conf exists (minimal)
-      copy:
-        dest: "{{ rsyslog_dir }}/rsyslog.conf"
-        content: |
-          module(load="imuxsock")
-          module(load="omstdout")
-          *.* :omstdout:
+    - name: Template rsyslog.conf (listener for TCP/UDP)
+      template:
+        src: rsyslog.conf.j2
+        dest: "{{ rsyslog_conf_file }}"
         owner: "{{ container_user }}"
         group: "{{ container_user }}"
         mode: '0644'

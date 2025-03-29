@@ -1,0 +1,11 @@
+module(load="imuxsock")     # Internal container logs 
+module(load="imudp")        # Enable UDP reception 
+input(type="imudp" port="514")
+
+module(load="imtcp")        # Enable TCP reception 
+input(type="imtcp" port="514")
+
+module(load="omstdout")     # Enable stdout output 
+
+*.* :omstdout:
+
