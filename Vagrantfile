@@ -15,7 +15,7 @@ Vagrant.configure("2") do |config|
 
       # Ansible provisioner included creating a whole development environment
       bigbrother.vm.provision "ansible", type: "ansible" do |ansible| 
-         ansible.playbook = "provision/ansible/playbook.yml"
+         ansible.playbook = "provision/ansible/rsyslog_docker_setup.yml"
          ansible.raw_ssh_args = [
             "-o", "StrictHostkeyChecking=no",
             "-i", ".vagrant/machines/bigbrother.clickdefense.in/virtualbox/private_key"

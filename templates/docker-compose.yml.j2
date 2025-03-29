@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  rsyslog:
+    image: rsyslog/syslog_appliance_alpine:latest
+    container_name: rsyslog
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - ./rsyslog.conf:/etc/rsyslog.conf:ro
+      - ./rsyslog.d:/etc/rsyslog.d:ro
+    environment:
+      # debug var removed because it caused an error
+      # - RSYSLOG_DEBUG=on
+
