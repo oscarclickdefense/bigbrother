@@ -18,6 +18,8 @@
           - curl
           - gnupg
           - lsb-release
+          - vim
+          - tmux
         update_cache: yes
         state: present
 
