@@ -1,0 +1,6 @@
+.*un
+.*un~
+.*swp
+.*swp~
+
+.vagrant/
