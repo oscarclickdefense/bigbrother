@@ -1,7 +1,7 @@
 ---
 - name: Setup Rsyslog Docker Container on Debian
   hosts: all
-  become: true  # ansible_user se eleva para preparar el sistema
+  become: true
 
   vars:
     container_user: container_user
@@ -50,19 +50,6 @@
         groups: docker
         append: yes
 
-    - name: Get UID and GID of container_user
-      command: id -u {{ container_user }}
-      register: uid_result
-
-    - name: Get GID of container_user
-      command: id -g {{ container_user }}
-      register: gid_result
-
-    - name: Set UID and GID facts
-      set_fact:
-        uid: "{{ uid_result.stdout }}"
-        gid: "{{ gid_result.stdout }}"
-
     - name: Create rsyslog directory
       file:
         path: "{{ rsyslog_dir }}"
@@ -72,21 +59,10 @@
         mode: '0755'
         recurse: yes
 
-    - name: Write docker-compose.yml as container_user
-      copy:
+    - name: Template docker-compose.yml
+      template:
+        src: docker-compose.yml.j2
         dest: "{{ docker_compose_file }}"
-        content: |
-          version: '3.8'
-          services:
-            rsyslog:
-              image: rsyslog/syslog_appliance_alpine:latest
-              container_name: rsyslog
-              restart: unless-stopped
-              network_mode: "host"
-              volumes:
-                - ./rsyslog.conf:/etc/rsyslog.conf:ro
-                - ./rsyslog.d:/etc/rsyslog.d:ro
-              environment:
         owner: "{{ container_user }}"
         group: "{{ container_user }}"
         mode: '0644'
@@ -96,7 +72,6 @@
         dest: "{{ rsyslog_dir }}/rsyslog.conf"
         content: |
           module(load="imuxsock")
-          module(load="imklog")
           module(load="omstdout")
           *.* :omstdout:
         owner: "{{ container_user }}"
@@ -111,7 +86,7 @@
         group: "{{ container_user }}"
         mode: '0755'
 
-    - name: Start rsyslog container as container_user via sudo
+    - name: Start rsyslog container as container_user
       shell: "sudo -u {{ container_user }} docker compose -f {{ docker_compose_file }} up -d"
       args:
         chdir: "{{ rsyslog_dir }}"
