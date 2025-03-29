@@ -1,0 +1,110 @@
+---
+- name: Setup Rsyslog Docker Container on Debian
+  hosts: all
+  become: true
+
+  vars:
+    container_user: container_user
+    rsyslog_dir: /home/container_user/services/rsyslog
+    docker_compose_file: "{{ rsyslog_dir }}/docker-compose.yml"
+
+  tasks:
+    - name: Install required APT packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        update_cache: yes
+        state: present
+
+    - name: Add Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/debian/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: Add Docker APT repository for Debian
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian {{ ansible_lsb.codename }} stable"
+        state: present
+        filename: docker
+
+    - name: Install Docker and Docker Compose plugin
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Create service user '{{ container_user }}'
+      user:
+        name: "{{ container_user }}"
+        shell: /bin/bash
+        create_home: yes
+        groups: docker
+        append: yes
+
+    - name: Create rsyslog directory
+      file:
+        path: "{{ rsyslog_dir }}"
+        state: directory
+        owner: "{{ container_user }}"
+        group: "{{ container_user }}"
+        mode: '0755'
+        recurse: yes
+
+    - name: Copy docker-compose.yml for rsyslog
+      copy:
+        dest: "{{ docker_compose_file }}"
+        content: |
+          version: '3.8'
+          services:
+            rsyslog:
+              image: rsyslog/syslog_appliance_alpine:latest
+              container_name: rsyslog
+              restart: unless-stopped
+              network_mode: "host"
+              volumes:
+                - /dev/log:/dev/log
+                - ./rsyslog.conf:/etc/rsyslog.conf:ro
+                - ./rsyslog.d:/etc/rsyslog.d:ro
+              environment:
+                - RSYSLOG_DEBUG=on
+        owner: "{{ container_user }}"
+        group: "{{ container_user }}"
+        mode: '0644'
+
+    - name: Ensure rsyslog.conf exists (minimal default)
+      copy:
+        dest: "{{ rsyslog_dir }}/rsyslog.conf"
+        content: |
+          module(load="imuxsock") # for receiving messages from systemd/journald
+          module(load="imklog")   # for kernel messages
+          module(load="omstdout") # for debugging
+
+          *.* :omstdout:
+        owner: "{{ container_user }}"
+        group: "{{ container_user }}"
+        mode: '0644'
+
+    - name: Ensure rsyslog.d directory exists
+      file:
+        path: "{{ rsyslog_dir }}/rsyslog.d"
+        state: directory
+        owner: "{{ container_user }}"
+        group: "{{ container_user }}"
+        mode: '0755'
+
+    - name: Start rsyslog container as container_user
+      become: true
+      become_user: "{{ container_user }}"
+      shell: docker compose -f "{{ docker_compose_file }}" up -d
+      args:
+        chdir: "{{ rsyslog_dir }}"
+
