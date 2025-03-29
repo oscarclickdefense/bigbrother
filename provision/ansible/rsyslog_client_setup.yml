@@ -4,36 +4,24 @@
   become: true
 
   vars:
-    rsyslog_server_host: bigbrother.clickdefense.in
+    rsyslog_server_host: 127.0.0.1        # change to your actual collector IP or hostname
     rsyslog_server_port: 514
-    rsyslog_protocol: udp  # o "tcp" si prefieres
-    client_config_file: /etc/rsyslog.d/90-central-logger.conf
+    rsyslog_protocol: udp                 # or 'tcp'
 
   tasks:
-    - name: Install rsyslog (if not already present)
+    - name: Ensure rsyslog is installed
       apt:
         name: rsyslog
         state: present
         update_cache: yes
 
-    - name: Configure rsyslog to forward logs to central server
-      copy:
-        dest: "{{ client_config_file }}"
-        content: |
-          *.* @{{ rsyslog_server_host }}:{{ rsyslog_server_port }}
+    - name: Configure rsyslog forwarding to central server (via template)
+      template:
+        src: 90-central-logger.conf.j2
+        dest: /etc/rsyslog.d/90-central-logger.conf
         mode: '0644'
 
-      when: rsyslog_protocol == 'udp'
-
-    - name: Configure rsyslog to forward logs to central server (TCP)
-      copy:
-        dest: "{{ client_config_file }}"
-        content: |
-          *.* @@{{ rsyslog_server_host }}:{{ rsyslog_server_port }}
-        mode: '0644'
-      when: rsyslog_protocol == 'tcp'
-
-    - name: Restart rsyslog to apply changes
+    - name: Restart rsyslog to apply forwarding configuration
       service:
         name: rsyslog
         state: restarted
