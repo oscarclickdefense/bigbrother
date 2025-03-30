@@ -1,41 +1,44 @@
-# Path configuration
+# Variables comunes
 ANSIBLE_DIR := provision/ansible
 INVENTORY := $(ANSIBLE_DIR)/inventory.yml
-ANSIBLE_CFG := $(ANSIBLE_DIR)/ansible.cfg
+KEY_PATH := $(HOME)/.ssh/id_ed25519  
+ANSIBLE_CONFIG := $(ANSIBLE_DIR)/ansible.cfg
+SSH_ARGS := --private-key $(KEY_PATH) --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
-export ANSIBLE_CONFIG := $(ANSIBLE_CFG)
+# Playbooks
+BOOTSTRAP := $(ANSIBLE_DIR)/bootstrap_ansible.yml
+RSYSLOG_DOCKER := $(ANSIBLE_DIR)/rsyslog_docker_setup.yml
+RSYSLOG_CLIENT := $(ANSIBLE_DIR)/rsyslog_client_setup.yml
 
-.PHONY: all provision client clean known_hosts logs debug_server debug_client
+export ANSIBLE_CONFIG
 
-# Deploy the rsyslog server container
-provision:
-	ansible-playbook $(ANSIBLE_DIR)/rsyslog_docker_setup.yml -i $(INVENTORY) $(V)
+.PHONY: all
+all: rsyslog_docker rsyslog_client
 
-# Configure a client to forward logs
-client:
-	ansible-playbook $(ANSIBLE_DIR)/rsyslog_client_setup.yml -i $(INVENTORY) $(V)
+.PHONY: bootstrap
+bootstrap:
+	ansible-playbook $(BOOTSTRAP) -i $(INVENTORY)
 
-# Debug version: server setup with verbosity
-debug_server:
-	ansible-playbook $(ANSIBLE_DIR)/rsyslog_docker_setup.yml -i $(INVENTORY) -vv
+.PHONY: rsyslog_docker
+rsyslog_docker:
+	ansible-playbook $(RSYSLOG_DOCKER) -i $(INVENTORY) $(SSH_ARGS) -vvv
 
-# Debug version: client setup with verbosity
-debug_client:
-	ansible-playbook $(ANSIBLE_DIR)/rsyslog_client_setup.yml -i $(INVENTORY) -vv
+.PHONY: rsyslog_client
+rsyslog_client:
+	ansible-playbook $(RSYSLOG_CLIENT) -i $(INVENTORY) $(SSH_ARGS) -vvv
 
-# Remove known_hosts fingerprint if SSH key has changed
-known_hosts:
-	@echo "🔐 Cleaning up known_hosts entry for 192.168.1.100..."
-	@ssh-keygen -f ~/.ssh/known_hosts -R 192.168.1.100 || true
+.PHONY: ask_pass
+ask_pass:
+	ansible-playbook $(RSYSLOG_DOCKER) -i $(INVENTORY) --ask-pass --ask-become-pass
 
-# Delete Ansible retry files
-clean:
-	@find $(ANSIBLE_DIR) -name "*.retry" -delete
+.PHONY: ask_all
+ask_all:
+	ansible-playbook $(RSYSLOG_DOCKER) -i $(INVENTORY) --ask-pass --ask-become-pass
+	ansible-playbook $(RSYSLOG_CLIENT) -i $(INVENTORY) --ask-pass --ask-become-pass
 
-# Follow logs from the rsyslog container
-logs:
-	sudo docker logs -f rsyslog
-
-# Full setup
-all: provision client
+.PHONY: debug
+debug:
+	@echo "ANSIBLE_CONFIG = $(ANSIBLE_CONFIG)"
+	@echo "Using key at: $(KEY_PATH)"
+	@echo "Inventory: $(INVENTORY)"
 

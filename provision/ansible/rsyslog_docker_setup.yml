@@ -4,12 +4,18 @@
   become: true
 
   vars:
-    container_user: container_user
-    rsyslog_dir: /home/container_user/services/rsyslog
+    rsyslog_dir: "/home/{{ container_user }}/services/rsyslog"
     docker_compose_file: "{{ rsyslog_dir }}/docker-compose.yml"
     rsyslog_conf_file: "{{ rsyslog_dir }}/rsyslog.conf"
 
   tasks:
+
+    - name: Ensure '{{ container_user }}' exists before proceeding
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ container_user }}"
+        fail_key: true
+
     - name: Install required APT packages
       apt:
         name:
@@ -45,14 +51,6 @@
         state: present
         update_cache: yes
 
-    - name: Create service user '{{ container_user }}'
-      user:
-        name: "{{ container_user }}"
-        shell: /bin/bash
-        create_home: yes
-        groups: docker
-        append: yes
-
     - name: Create rsyslog service directory
       file:
         path: "{{ rsyslog_dir }}"
@@ -70,7 +68,7 @@
         group: "{{ container_user }}"
         mode: '0644'
 
-    - name: Template rsyslog.conf (listener for TCP/UDP)
+    - name: Template rsyslog.conf
       template:
         src: rsyslog.conf.j2
         dest: "{{ rsyslog_conf_file }}"
@@ -86,7 +84,7 @@
         group: "{{ container_user }}"
         mode: '0755'
 
-    - name: Start rsyslog container as container_user
+    - name: Start rsyslog container as {{ container_user }}
       shell: "sudo -u {{ container_user }} docker compose -f {{ docker_compose_file }} up -d"
       args:
         chdir: "{{ rsyslog_dir }}"
