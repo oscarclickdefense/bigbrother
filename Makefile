@@ -9,11 +9,13 @@ SSH_ARGS := --private-key $(KEY_PATH) --ssh-common-args="-o StrictHostKeyCheckin
 BOOTSTRAP := $(ANSIBLE_DIR)/bootstrap_ansible.yml
 RSYSLOG_DOCKER := $(ANSIBLE_DIR)/rsyslog_docker_setup.yml
 RSYSLOG_CLIENT := $(ANSIBLE_DIR)/rsyslog_client_setup.yml
+SNMP_SERVER := $(ANSIBLE_DIR)/snmp_server_setup.yml
+METRICS_EVIDENCE := $(ANSIBLE_DIR)/metrics_evidence.yml
 
 export ANSIBLE_CONFIG
 
 .PHONY: all
-all: rsyslog_docker rsyslog_client snmp_server
+all: rsyslog_docker rsyslog_client snmp_server metrics_evidence
 
 .PHONY: bootstrap
 bootstrap:
@@ -26,6 +28,14 @@ rsyslog_docker:
 .PHONY: rsyslog_client
 rsyslog_client:
 	ansible-playbook $(RSYSLOG_CLIENT) -i $(INVENTORY) $(SSH_ARGS) -vvv
+
+.PHONY: snmp_server
+snmp_server:
+	ansible-playbook $(SNMP_SERVER) -i $(INVENTORY) $(SSH_ARGS) -vvv
+
+.PHONY: metrics_evidence
+metrics_evidence:
+	ansible-playbook $(METRICS_EVIDENCE) -i $(INVENTORY) $(SSH_ARGS) -vvv
 
 .PHONY: ask_pass
 ask_pass:
@@ -41,10 +51,4 @@ debug:
 	@echo "ANSIBLE_CONFIG = $(ANSIBLE_CONFIG)"
 	@echo "Using key at: $(KEY_PATH)"
 	@echo "Inventory: $(INVENTORY)"
-
-snmp_server:
-	ansible-playbook provision/ansible/snmp_server_setup.yml \
-	  -i provision/ansible/inventory.yml \
-	  --private-key $$HOME/.ssh/id_ed25519 \
-	  --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -vvv
 

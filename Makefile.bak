@@ -13,7 +13,7 @@ RSYSLOG_CLIENT := $(ANSIBLE_DIR)/rsyslog_client_setup.yml
 export ANSIBLE_CONFIG
 
 .PHONY: all
-all: rsyslog_docker rsyslog_client
+all: rsyslog_docker rsyslog_client snmp_server
 
 .PHONY: bootstrap
 bootstrap:
@@ -41,4 +41,10 @@ debug:
 	@echo "ANSIBLE_CONFIG = $(ANSIBLE_CONFIG)"
 	@echo "Using key at: $(KEY_PATH)"
 	@echo "Inventory: $(INVENTORY)"
+
+snmp_server:
+	ansible-playbook provision/ansible/snmp_server_setup.yml \
+	  -i provision/ansible/inventory.yml \
+	  --private-key $$HOME/.ssh/id_ed25519 \
+	  --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -vvv
 

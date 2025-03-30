@@ -26,6 +26,9 @@
           - lsb-release
           - vim
           - tmux
+          - bc
+          - tcpdump
+          - snmp
         update_cache: yes
         state: present
 

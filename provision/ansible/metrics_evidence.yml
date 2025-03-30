@@ -1,0 +1,24 @@
+---
+- name: Upload evidence validation script to remote host
+  hosts: all
+  become: true
+  vars:
+    destination_path: "/home/{{ container_user }}/validacion_alertas.sh"
+
+  tasks:
+    - name: Ensure the target directory exists
+      file:
+        path: "/home/{{ container_user }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ container_user }}"
+        group: "{{ container_user }}"
+
+    - name: Upload validation script
+      ansible.builtin.copy:
+        src: validacion_trafico.sh
+        dest: "/home/{{ container_user }}/validacion_alertas.sh"
+        owner: "{{ container_user }}"
+        group: "{{ container_user }}"
+        mode: '0755'
+
