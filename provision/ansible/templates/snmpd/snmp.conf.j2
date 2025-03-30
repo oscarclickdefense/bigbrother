@@ -1,14 +1,14 @@
-# Example SNMP configuration file for snmpd (net-snmp)
+# Jinja2 template for snmpd.conf (snmpd/snmpd.conf.j2)
 
 agentAddress udp:161
+
 rocommunity public
 
-sysLocation    MyLocation
-sysContact     root@localhost
+sysLocation    {{ snmp_syslocation | default('MyLocation') }}
+sysContact     {{ snmp_syscontact  | default('root@localhost') }}
 
-# Example of restricting access:
-# com2sec readonly  default         public
-# group MyROGroup v1         readonly
-# view all    included  .1                               80
-# access MyROGroup ""      any       noauth    exact  all    none   none
+com2sec readonly  default         public
+group MyROGroup v2c         readonly
+view all    included  .1                               80
+access MyROGroup ""      any       noauth    exact  all    none   none
 

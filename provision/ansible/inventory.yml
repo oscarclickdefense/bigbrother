@@ -6,10 +6,12 @@ all:
     ansible_user_authorized_keys: "{{ ansible_bastion_pubkey }}"
 
   hosts:
-
     bigbrother.clickdefense.in:
       ansible_host: 192.168.1.100
       ansible_user: ansible_user
       container_user: ansible_user
       ansible_become: true
-
+      snmp_dir: "/home/ansible_user/services/snmpd"
+      snmp_docker_compose_file: "/home/ansible_user/services/snmpd/docker-compose.yml"
+      snmp_conf_file: "/home/ansible_user/services/snmpd/snmpd.conf"
+      ansible_become: true

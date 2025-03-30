@@ -1,12 +1,7 @@
 ---
-- name: Setup SNMP Server Docker Container on Debian
+- name: Setup SNMP Server Container on Debian
   hosts: all
   become: true
-
-  vars:
-    snmp_dir: "/home/{{ container_user }}/services/snmp"
-    docker_compose_file: "{{ snmp_dir }}/docker-compose.yml"
-    snmp_conf_file: "{{ snmp_dir }}/snmpd.conf"
 
   tasks:
 
@@ -14,8 +9,8 @@
       ansible.builtin.getent:
         database: passwd
         key: "{{ container_user }}"
+        fail_key: true
       register: container_user_check
-      failed_when: container_user_check.found is not defined
 
     - name: Install required APT packages
       apt:
@@ -25,6 +20,8 @@
           - curl
           - gnupg
           - lsb-release
+          - vim
+          - tmux
         update_cache: yes
         state: present
 
@@ -59,24 +56,23 @@
         mode: '0755'
         recurse: yes
 
-    - name: Template docker-compose.yml for SNMP
+    - name: Template docker-compose.yml
       template:
-        src: snmp/docker-compose.yml.j2
-        dest: "{{ docker_compose_file }}"
+        src: templates/snmpd/docker-compose.yml.j2
+        dest: "{{ snmp_dir }}/docker-compose.yml"
         owner: "{{ container_user }}"
         group: "{{ container_user }}"
         mode: '0644'
 
     - name: Template snmpd.conf
       template:
-        src: snmp/snmpd.conf.j2
+        src: templates/snmpd/snmp.conf.j2
         dest: "{{ snmp_conf_file }}"
         owner: "{{ container_user }}"
         group: "{{ container_user }}"
         mode: '0644'
 
-    - name: Start SNMP container as {{ container_user }}
-      shell: "sudo -u {{ container_user }} docker compose -f {{ docker_compose_file }} up -d"
+    - name: Start snmpd container as {{ container_user }}
+      shell: "sudo -u {{ container_user }} docker compose -f {{ snmp_docker_compose_file }} up -d --build --force-recreate"
       args:
         chdir: "{{ snmp_dir }}"
-
