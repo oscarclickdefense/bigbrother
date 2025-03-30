@@ -5,4 +5,4 @@
 
 .vagrant/
 *.tar
-.bak
+.*bak
