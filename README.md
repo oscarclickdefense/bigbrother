@@ -1,120 +1,71 @@
-# BigBrother Logging Stack
+# 🛰️ BigBrother - Centralized Logging with Rsyslog in Docker
 
-This repository sets up a centralized logging environment using rsyslog in a Docker container. Provisioning is automated using Ansible and Vagrant.
-
----
-
-## ✅ Requirements
-
-- A machine (real or virtual) with:
-  - SSH access to the target host.
-  - A user with passwordless `sudo` privileges (typically `ansible_user`).
-- `vagrant` and `virtualbox` installed (if using the included Vagrant setup).
-- `ansible` installed via system packages (not pip).
-- Docker and Docker Compose on the target host (installed automatically).
+This project provides an Ansible-based system to deploy a centralized logging service using `rsyslog` inside a Docker container. It includes provisioning playbooks, SSH-based inventory configuration, and `make` automation for rapid setup.
 
 ---
 
 ## 🚀 Quickstart
 
-### 1. Spin up the target virtual machine
+### ✅ Requirements (target machine)
+- A running Debian-based machine (tested with Debian *testing/sid*)
+- SSH access using a private key
+- A user with **passwordless sudo**
+- Docker is **not** required beforehand — it will be installed automatically
 
-```bash
-vagrant up
-```
+### ⚙️ Setup (control host)
 
-This will:
+1. Clone the repository:
 
-- Launch a Debian-based VM at `192.168.1.100`.
-- Run the `bootstrap_ansible.yml` playbook to create `ansible_user` with SSH access and passwordless sudo.
+    ```bash
+    git clone https://your.git.repo/bigbrother.git
+    cd bigbrother
+    ```
 
-### 2. Prepare SSH access (optional)
+2. Edit the inventory file:
 
-Ensure that the public key from your bastion or control machine (e.g. `~/.ssh/id_ed25519.pub`) is added to the `ansible_user`'s `authorized_keys`.
+    ```yaml
+    # provision/ansible/inventory.yml
 
-### 3. Configure inventory variables
+    all:
+      hosts:
+        bigbrother.clickdefense.in:
+          ansible_host: 192.168.1.100
+          ansible_user: ansible_user
+          container_user: ansible_user
+    ```
 
-Edit `provision/ansible/inventory.yml` and ensure these variables are defined:
+3. Run the deployment:
 
-```yaml
-all:
-  vars:
-    ansible_user: ansible_user
-    container_user: container_user
-    ansible_ssh_private_key_file: ~/.ssh/id_ed25519
-    ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-    ansible_become_password: "{{ vault_become_pass | default(omit) }}"
-```
-
-You can override `container_user` to match an existing user on the host system.
-
----
-
-## 🛠️ Running Playbooks
-
-Use the `Makefile` to run each playbook individually or all at once:
-
-### Run full provisioning
-
-```bash
-make all
-```
-
-This runs:
-
-- `rsyslog_docker_setup.yml` → deploys the rsyslog container
-- `rsyslog_client_setup.yml` → configures client logging to the rsyslog server
-
-### Run individual playbooks
-
-```bash
-make rsyslog_docker
-make rsyslog_client
-make bootstrap
-```
-
-Use `make bootstrap_password` if you want to be prompted for the `ansible_user` sudo password.
+    ```bash
+    make rsyslog_docker
+    ```
 
 ---
 
-## 📦 Generated Files
+## 🧱 Project Structure
 
-The Docker Compose and configuration files are rendered and stored in:
-
-```
-/home/<container_user>/services/rsyslog/
-├── docker-compose.yml
-└── rsyslog.conf
-```
-
-These are based on templates located in:
-
-```
-provision/ansible/templates/
+```text
+bigbrother/
+├── Makefile
+├── Vagrantfile
+├── bin/
+├── provision/
+│   └── ansible/
+│       ├── ansible.cfg
+│       ├── bootstrap_ansible.yml
+│       ├── inventory.yml
+│       ├── rsyslog_docker_setup.yml
+│       ├── rsyslog_client_setup.yml
+│       └── templates/
+│           ├── docker-compose.yml.j2
+│           └── rsyslog.conf.j2
 ```
 
 ---
 
-## 🧪 Debugging
+## 🔧 Make Targets
 
-To test SSH manually:
-
-```bash
-ssh -i ~/.ssh/id_ed25519 ansible_user@192.168.1.100
-```
-
-To re-run provisioning without destroying the VM:
-
-```bash
-make rsyslog_docker
-```
-
----
-
-## 🔐 Notes
-
-- `authorized_key` is provided by `ansible.posix`. It must be available via your system Ansible installation.
-- The playbooks are designed to work without requiring Ansible collections installed via pip or galaxy.
-
----
+- `make bootstrap_ansible`: Create a user with sudo access and SSH config (optional).
+- `make rsyslog_docker`: Deploy the `rsyslog` container on the target host.
+- `make all`: Run both bootstrap and `rsyslog` provisioning.
 
