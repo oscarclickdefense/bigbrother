@@ -17,7 +17,7 @@
 
     - name: Configure rsyslog forwarding to central server (via template)
       template:
-        src: 90-central-logger.conf.j2
+        src: rsyslog/90-central-logger.conf.j2
         dest: /etc/rsyslog.d/90-central-logger.conf
         mode: '0644'
 

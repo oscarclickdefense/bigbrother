@@ -1,0 +1,14 @@
+# Example SNMP configuration file for snmpd (net-snmp)
+
+agentAddress udp:161
+rocommunity public
+
+sysLocation    MyLocation
+sysContact     root@localhost
+
+# Example of restricting access:
+# com2sec readonly  default         public
+# group MyROGroup v1         readonly
+# view all    included  .1                               80
+# access MyROGroup ""      any       noauth    exact  all    none   none
+

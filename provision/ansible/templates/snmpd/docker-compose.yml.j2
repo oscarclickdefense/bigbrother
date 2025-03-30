@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  snmpd:
+    image: polinux/snmpd
+    container_name: snmpd
+    restart: unless-stopped
+    ports:
+      - "161:161/udp"
+    volumes:
+      - {{ snmp_conf_file }}:/etc/snmp/snmpd.conf:ro
+    environment:
+      - SNMP_COMMUNITY=public
+      - SNMP_LOCATION=MyLocation
+      - SNMP_CONTACT=root@localhost
+

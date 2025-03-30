@@ -1,12 +1,12 @@
 ---
-- name: Setup Rsyslog Docker Container on Debian
+- name: Setup SNMP Server Docker Container on Debian
   hosts: all
   become: true
 
   vars:
-    rsyslog_dir: "/home/{{ container_user }}/services/rsyslog"
-    docker_compose_file: "{{ rsyslog_dir }}/docker-compose.yml"
-    rsyslog_conf_file: "{{ rsyslog_dir }}/rsyslog.conf"
+    snmp_dir: "/home/{{ container_user }}/services/snmp"
+    docker_compose_file: "{{ snmp_dir }}/docker-compose.yml"
+    snmp_conf_file: "{{ snmp_dir }}/snmpd.conf"
 
   tasks:
 
@@ -14,7 +14,8 @@
       ansible.builtin.getent:
         database: passwd
         key: "{{ container_user }}"
-        fail_key: true
+      register: container_user_check
+      failed_when: container_user_check.found is not defined
 
     - name: Install required APT packages
       apt:
@@ -24,8 +25,6 @@
           - curl
           - gnupg
           - lsb-release
-          - vim
-          - tmux
         update_cache: yes
         state: present
 
@@ -51,41 +50,33 @@
         state: present
         update_cache: yes
 
-    - name: Create rsyslog service directory
+    - name: Create SNMP service directory
       file:
-        path: "{{ rsyslog_dir }}"
+        path: "{{ snmp_dir }}"
         state: directory
         owner: "{{ container_user }}"
         group: "{{ container_user }}"
         mode: '0755'
         recurse: yes
 
-    - name: Template docker-compose.yml
+    - name: Template docker-compose.yml for SNMP
       template:
-        src: rsyslog/docker-compose.yml.j2
+        src: snmp/docker-compose.yml.j2
         dest: "{{ docker_compose_file }}"
         owner: "{{ container_user }}"
         group: "{{ container_user }}"
         mode: '0644'
 
-    - name: Template rsyslog.conf
+    - name: Template snmpd.conf
       template:
-        src: rsyslog/rsyslog.conf.j2
-        dest: "{{ rsyslog_conf_file }}"
+        src: snmp/snmpd.conf.j2
+        dest: "{{ snmp_conf_file }}"
         owner: "{{ container_user }}"
         group: "{{ container_user }}"
         mode: '0644'
 
-    - name: Ensure rsyslog.d directory exists
-      file:
-        path: "{{ rsyslog_dir }}/rsyslog.d"
-        state: directory
-        owner: "{{ container_user }}"
-        group: "{{ container_user }}"
-        mode: '0755'
-
-    - name: Start rsyslog container as {{ container_user }}
+    - name: Start SNMP container as {{ container_user }}
       shell: "sudo -u {{ container_user }} docker compose -f {{ docker_compose_file }} up -d"
       args:
-        chdir: "{{ rsyslog_dir }}"
+        chdir: "{{ snmp_dir }}"
 
