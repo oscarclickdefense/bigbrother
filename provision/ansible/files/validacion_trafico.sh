@@ -1,22 +1,20 @@
 #!/usr/bin/env bash
 
-#!/bin/bash
-
 # Configuración
-SYSLOG_IP="127.0.0.1"
+SYSLOG_IP="socdefense"
 SYSLOG_PORT="514"
-SNMP_IP="127.0.0.1"
+SNMP_IP="socdefense"
 SNMP_PORT="161"
-SYSLOG_MSGS=20
-SNMP_QUERIES=20
+SYSLOG_MSGS=100
+SNMP_QUERIES=500
 TMPDIR=$(mktemp -d)
-TCPDUMP_IF="lo"  # o la interfaz conectada a los contenedores si no es loopback
+TCPDUMP_IF="lo"  # Cambiar si se usa otra interfaz
 
 echo "=== Validación de alerta por Syslog y SNMP ==="
 echo "Usando interfaz: $TCPDUMP_IF"
 echo
 
-# Función para limpiar capturas anteriores
+# Limpieza automática al salir
 cleanup() {
     echo "Limpiando..."
     rm -rf "$TMPDIR"
@@ -40,7 +38,7 @@ sleep 2
 kill $TCPDUMP_PID_SYSLOG
 sleep 1
 
-SYSLOG_COUNT=$(tcpdump -nn -r "$TMPDIR/syslog.pcap" | wc -l)
+SYSLOG_COUNT=$(tcpdump -nn -r "$TMPDIR/syslog.pcap" 2>/dev/null | wc -l)
 echo "🔎 Syslog capturado: $SYSLOG_COUNT de $SYSLOG_MSGS mensajes enviados"
 
 SYSLOG_RATIO=$(echo "scale=2; $SYSLOG_COUNT*100/$SYSLOG_MSGS" | bc)
@@ -63,7 +61,8 @@ sleep 2
 kill $TCPDUMP_PID_SNMP
 sleep 1
 
-SNMP_COUNT=$(tcpdump -nn -r "$TMPDIR/snmp.pcap" | grep "UDP" | wc -l)
+# Solo cuenta solicitudes SNMP (paquetes UDP cuyo destino es el puerto 161)
+SNMP_COUNT=$(tcpdump -nn -r "$TMPDIR/snmp.pcap" 2>/dev/null | grep -c '> .*\.161:')
 echo "🔎 SNMP capturado: $SNMP_COUNT de $SNMP_QUERIES consultas enviadas"
 
 SNMP_RATIO=$(echo "scale=2; $SNMP_COUNT*100/$SNMP_QUERIES" | bc)
@@ -75,8 +74,8 @@ echo
 echo "📊 Resultados finales:"
 echo "Syslog: $SYSLOG_RATIO% de mensajes capturados"
 echo "SNMP:   $SNMP_RATIO% de consultas capturadas"
-
 echo
+
 if (( $(echo "$SYSLOG_RATIO >= 90" | bc -l) )) && (( $(echo "$SNMP_RATIO >= 90" | bc -l) )); then
     echo "✅ Validación exitosa: se ha capturado ≥ 90% en ambos casos."
     exit 0
@@ -84,6 +83,4 @@ else
     echo "❌ Validación incompleta: no se ha alcanzado el 90% de captura en al menos uno de los casos."
     exit 1
 fi
-
-
 
